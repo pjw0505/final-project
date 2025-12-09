@@ -2,6 +2,29 @@
 # app.py: 문화유산 에이전트 (최종 수정 및 정리된 버전)
 # =======================================================
 
+# app.py 파일 내 get_openai_client 함수 수정
+
+@st.cache_resource
+def get_openai_client():
+    
+    # 💥💥 os.getenv() 대신 st.secrets 객체를 직접 사용합니다. 💥💥
+    
+    # 1. st.secrets 객체에서 API 키 값을 가져옵니다.
+    #    (secrets는 [secrets] 섹션으로 정의했으므로, st.secrets["secrets"]를 통해 접근합니다.)
+    try:
+        # 키를 가져와서 양쪽 공백이나 줄바꿈 문자를 확실히 제거합니다.
+        api_key = st.secrets["secrets"]["OPENAI_API_KEY"].strip()
+    except KeyError:
+        # st.secrets에 키가 정의되지 않았거나 섹션 이름이 잘못되었을 때
+        st.error("오류: Streamlit Secrets에 [secrets] 섹션 또는 OPENAI_API_KEY가 누락되었습니다.")
+        st.stop()
+        
+    # 2. 키 값이 비어 있는지 최종 확인
+    if not api_key or not api_key.startswith("sk-"):
+        st.error("오류: API 키 (OPENAI_API_KEY)의 값이 유효하지 않습니다.")
+        st.stop()
+        
+    return OpenAI(api_key=api_key)
 import streamlit as st
 from openai import OpenAI
 import json
