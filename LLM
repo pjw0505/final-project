@@ -1,0 +1,102 @@
+# app.py (Streamlit UI 및 LLM 실행)
+
+# --- LLM 실행 및 Tool Call 처리 함수 ---
+def run_master_agent(user_prompt: str, location: str, structure_name: str):
+    messages = [{"role": "user", "content": user_prompt}]
+    tool_results = {}
+    
+    # LLM과 Tools 간의 대화 루프 (최대 3회 반복)
+    for _ in range(3):
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=messages,
+            tools=tools,
+            tool_choice="auto",
+        )
+        
+        response_message = response.choices[0].message
+        
+        # 1. Tool Call이 있는지 확인
+        if not response_message.tool_calls:
+            # 최종 분석 결과 텍스트 반환
+            return response_message.content, tool_results
+        
+        # 2. Tool Call 실행
+        messages.append(response_message)
+        
+        for tool_call in response_message.tool_calls:
+            function_name = tool_call.function.name
+            function_args = json.loads(tool_call.function.arguments)
+            
+            st.info(f"에이전트가 외부 도구 호출: {function_name}")
+            
+            # 함수 실행
+            if function_name == "get_heritage_text_record":
+                function_args['location'] = location
+                function_args['structure_name'] = structure_name
+            
+            # Mock 함수 실행
+            function_response = available_functions[function_name](**function_args)
+            
+            # Tool 실행 결과를 저장하고 LLM에게 전달
+            tool_results[function_name] = json.loads(function_response)
+            messages.append(
+                {"tool_call_id": tool_call.id, "role": "tool", "content": function_response}
+            )
+            
+    # 루프 종료 후 최종 응답 반환
+    final_response = client.chat.completions.create(model="gpt-4o-mini", messages=messages)
+    return final_response.choices[0].message.content, tool_results
+
+
+# --- Streamlit UI 시작 ---
+st.title("🌍 지역 문화유산 디지털 마스터 에이전트")
+st.markdown("역사 기록을 분석하고 훼손된 문화유산을 디지털로 복원합니다.")
+
+# 사이드바 (입력 영역)
+with st.sidebar:
+    st.header("문화유산 정보 입력")
+    # 1. 지역 및 구조물 이름 입력 (Tool 1의 입력)
+    location = st.text_input("지역:", "서울 종로")
+    structure_name = st.text_input("문화유산 이름/특징:", "경복궁 사정전")
+    location_data = st.text_input("지형 데이터:", "평지")
+    
+    # 2. 분석 요청 프롬프트
+    prompt = st.text_area(
+        "AI 분석 및 복원 요청:", 
+        f"'{structure_name}'의 역사 기록을 검색하고, 그 기록을 바탕으로 복원할 때의 시각적인 묘사를 생성해 줘. 그리고 복원된 모습을 이미지로 시뮬레이션해 줘.",
+        height=150
+    )
+
+# 메인 실행 버튼
+if st.button("🔎 분석 및 복원 시뮬레이션 실행"):
+    if structure_name and prompt:
+        with st.spinner("AI 에이전트가 역사 기록을 검색하고 복원 명령을 생성 중입니다..."):
+            
+            # 에이전트 실행
+            analysis_text, tool_results = run_master_agent(prompt, location, structure_name)
+            
+            st.subheader("💡 에이전트 분석 결과 및 스토리텔링")
+            st.write(analysis_text)
+            
+            if "get_heritage_text_record" in tool_results:
+                record = tool_results["get_heritage_text_record"]
+                if record.get("status") == "success":
+                    st.subheader("📜 검색된 역사 기록")
+                    st.code(record["text_record"], language='markdown')
+                    
+                    # 3D 복원 결과 표시
+                    if "call_3d_restoration_api" in tool_results:
+                        restored = tool_results["call_3d_restoration_api"]
+                        if restored.get("status") == "success":
+                            st.subheader("✨ 디지털 복원 시뮬레이션 결과")
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                st.text("원본 이미지 (기록에 의해 가정)")
+                                st.image(record["original_image_url"], caption="훼손되거나 소실된 유산")
+                            with col2:
+                                st.text("AI 복원 시뮬레이션")
+                                st.image(restored["restored_url"], caption="기록 기반 복원")
+                            
+    else:
+        st.warning("문화유산 이름과 분석 요청을 입력해 주세요.")
