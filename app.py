@@ -107,7 +107,7 @@ if st.button("🔎 분석 및 복원 시뮬레이션 실행")
     # ...
 
 # client = get_openai_client() # 이제 이 client 객체는 함수를 호출해서 얻습니다.
-load_dotenv()
+
 # OpenAI API 키는 환경 변수에서 로드됩니다.
 
 # --- 1. Tool(Function) 정의: Mock 데이터 및 API 대체 함수 ---
