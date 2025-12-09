@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 # OpenAI API 키는 환경 변수에서 로드됩니다.
-client = OpenAI(api_key=os.getenv("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")) 
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # --- 1. Tool(Function) 정의: Mock 데이터 및 API 대체 함수 ---
 
