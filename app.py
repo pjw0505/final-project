@@ -6,6 +6,81 @@ import json
 import os
 from dotenv import load_dotenv
 
+# app.py 파일 상단 (import문 바로 아래)
+
+# from dotenv import load_dotenv # 이 라인은 Streamlit Cloud에서는 주석 처리하거나 제거해야 합니다.
+
+# --- LLM 클라이언트를 안전하게 초기화하는 함수 ---
+@st.cache_resource
+
+def get_openai_client():
+    # Streamlit Cloud가 환경 변수를 로드한 후 이 함수가 실행됩니다.
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        st.error("오류: API 키 (OPENAI_API_KEY)가 Streamlit Secrets에 설정되지 않았습니다.")
+        st.stop() # 키가 없으면 앱 실행을 중단합니다.
+        
+    return OpenAI(api_key=api_key)
+
+# app.py 파일에 추가해야 할 run_master_agent 함수
+
+def run_master_agent(user_prompt: str, location: str, structure_name: str):
+    
+    # 1. 안전하게 초기화된 클라이언트 객체를 가져옵니다.
+    client = get_openai_client()
+    
+    # 2. Tool 함수들과 LLM이 사용할 변수들을 정의합니다.
+    available_functions = {
+        "get_heritage_text_record": get_heritage_text_record,
+        "call_3d_restoration_api": call_3d_restoration_api,
+    }
+    # (주의: tools는 파일 상단에 정의된 전역 변수여야 합니다.)
+    
+    messages = [{"role": "user", "content": user_prompt}]
+    tool_results = {}
+    
+    # 3. LLM과 Tools 간의 대화 루프 (최대 3회 반복)
+    for _ in range(3):
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=messages,
+            tools=tools,
+            tool_choice="auto",
+        )
+        
+        response_message = response.choices[0].message
+        
+        # 최종 분석 결과 텍스트가 나왔는지 확인
+        if not response_message.tool_calls:
+            return response_message.content, tool_results
+        
+        # 4. Tool Call 실행 (MCP 핵심 로직)
+        messages.append(response_message)
+        
+        for tool_call in response_message.tool_calls:
+            function_name = tool_call.function.name
+            function_args = json.loads(tool_call.function.arguments)
+            
+            st.info(f"에이전트가 외부 도구 호출: {function_name}")
+            
+            # 함수 실행
+            if function_name == "get_heritage_text_record":
+                function_args['location'] = location
+                function_args['structure_name'] = structure_name
+            
+            function_response = available_functions[function_name](**function_args)
+            
+            # 5. Tool 실행 결과를 저장하고 LLM에게 전달하여 최종 응답을 유도
+            tool_results[function_name] = json.loads(function_response)
+            messages.append(
+                {"tool_call_id": tool_call.id, "role": "tool", "content": function_response}
+            )
+            
+    # 루프 종료 후 최종 응답 반환
+    final_response = client.chat.completions.create(model="gpt-4o-mini", messages=messages)
+    return final_response.choices[0].message.content, tool_results
+
+# client = get_openai_client() # 이제 이 client 객체는 함수를 호출해서 얻습니다.
 load_dotenv()
 # OpenAI API 키는 환경 변수에서 로드됩니다.
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
