@@ -80,6 +80,32 @@ def run_master_agent(user_prompt: str, location: str, structure_name: str):
     final_response = client.chat.completions.create(model="gpt-4o-mini", messages=messages)
     return final_response.choices[0].message.content, tool_results
 
+# --- Streamlit UI 시작 --- (run_master_agent 함수 정의 뒤에 위치)
+
+st.title("🌍 지역 문화유산 디지털 마스터 에이전트")
+st.markdown("역사 기록을 분석하고 훼손된 문화유산을 디지털로 복원합니다.")
+with st.sidebar:
+    st.header("문화유산 정보 입력")
+    location = st.text_input("지역:", "서울 종로")
+    structure_name = st.text_input("문화유산 이름/특징:", "경복궁 사정전")
+    location_data = st.text_input("지형 데이터:", "평지")
+    
+    prompt = st.text_area(
+        "AI 분석 및 복원 요청:", 
+        f"'{structure_name}'의 역사 기록을 검색하고...",
+        height=150
+    )
+
+# 사이드바 (입력 영역)
+with st.sidebar:
+    st.header("문화유산 정보 입력")
+    # ... (st.text_input, st.text_area 등의 입력 위젯 코드)
+    
+# 메인 실행 버튼
+if st.button("🔎 분석 및 복원 시뮬레이션 실행"):
+    # 이 안에는 run_master_agent(prompt, ...) 호출 코드만 있어야 함
+    # ...
+
 # client = get_openai_client() # 이제 이 client 객체는 함수를 호출해서 얻습니다.
 load_dotenv()
 # OpenAI API 키는 환경 변수에서 로드됩니다.
