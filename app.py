@@ -73,7 +73,7 @@ def call_3d_restoration_api(description: str, location_data: str) -> str:
 
 tools = [
     {"type": "function", "function": {"name": "get_heritage_text_record", "description": "지역 및 구조물 이름을 사용하여 역사 기록 텍스트를 검색하고 원본 이미지 URL을 반환합니다.", "parameters": {"type": "object", "properties": {"location": {"type": "string"}, "structure_name": {"type": "string"}}, "required": ["structure_name"]}}},
-    {"type": "function", "function": {"name": "call_3d_restoration_api", "description": "상세한 묘사를 기반으로 3D 모델 또는 복원 이미지를 생성하는 API를 호출하고 결과를 반환합니다.", "parameters": {"type": "object", "properties": {"description": {"type": "string"}, "location_data": {"type": "string"}}, "required": ["description", "location_data"]}}},
+    {"type": "function", "function": {"name": "call_3d_restoration_api", "description": "상세한 묘사를 기반으로 3D 모델 또는 복원 이미지를 생성하는 API를 호출하고 결과를 반환합니다.", "parameters": {"type": "object", "properties": {"description": {"type": "string"}, "location_data": {"type": "string"}}, "required": ["description", "location_data"]}}}
 ]
 available_functions = {
     "get_heritage_text_record": get_heritage_text_record,
